@@ -7,7 +7,7 @@ age = nsteps - anc[,1]
 # Function to compute the distance between any pair of species
 
 PD = matrix(0,nr = S, nc = S)
-ANC = matrix(0,nr = S, nc = S) 
+ANC = matrix(0,nr = S, nc = S)
 diag(ANC) = c(1:S)
 
 for(i in 1:S) {
@@ -16,7 +16,7 @@ for(i in 1:S) {
 #			if(pres_vec[j]==1) {
 				if(i<j) {
 					anc_i = anc[i,2]
-					anc_j = anc[j,2] 
+					anc_j = anc[j,2]
 
 					if(anc_i == j) {
 						PD[i,j] = nsteps - anc[anc_i,1]
@@ -32,7 +32,7 @@ for(i in 1:S) {
 						if(anc_i == 0) {
 							PD[i,j] = nsteps
 							ANC[i,j] = anc_i
-						}						
+						}
 						else {
 							PD[i,j] = nsteps - anc[anc_i,1]
 							ANC[i,j] = anc_i
@@ -58,9 +58,9 @@ for(i in 1:S) {
 							cat(anc_i, " ", anc_j,'\n')
 						}
 					}
-				}			
+				}
 #			}
-			cat(i, " ", j, '\n')			
+			cat(i, " ", j, '\n')
 		}
 #	}
 }

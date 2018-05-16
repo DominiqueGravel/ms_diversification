@@ -1,6 +1,6 @@
 ########################################
 # Function to generate a new set of traits for ancestors
-# Each species is characterized by a set of 3 traits: n, o and r
+# Each species is characterized by a set of 3 traits: n (niche), o (optimum) and r (niche's range)
 rand_traits_anc = function(pars) {
 	with(as.list(pars),{
 		n = runif(1, 0, 1)
@@ -36,7 +36,7 @@ rand_traits_mut = function(traits_anc, pars) {
 			o_m = n_m/2
 			traits_mut = c(n = n_m, r = r, o = o_m)
 		}
-		traits_mut 
+		traits_mut
 	})
 }
 
@@ -52,7 +52,7 @@ get_L_mat = function(basal, pars, traits_mat) {
 
 		# Upper boundary
 		high = traits_mat$o + traits_mat$r
-		high_mat = matrix(high, nr = Smax+Sbasal, nc = Smax, byrow = TRUE)	
+		high_mat = matrix(high, nr = Smax+Sbasal, nc = Smax, byrow = TRUE)
 		S = nrow(traits_mat)
 
 		# Matrix of niche positions
@@ -112,9 +112,12 @@ sim_model = function(seed, pars, nsteps) {
 	pres[1,1] = 1
 
  	# Set the ancestry object
-	anc = matrix(0,nr = Smax, nc = 2)
+	anc = matrix(0,nr = Smax, nc = 3)
 
-	# Record the matrices 
+	# Set the extinctions object
+	extinct = matrix(0,nr = Smax, nc = 2)
+
+	# Record the matrices
 	L_list = list()
 
 	# Species count
@@ -141,23 +144,23 @@ sim_model = function(seed, pars, nsteps) {
 			if(runif(1, 0, 1) < u_max) {
 
 				# Pick new parameters
-				traits_mut = rand_traits_mut(traits_mat[i,], pars) 
+				traits_mut = rand_traits_mut(traits_mat[i,], pars)
 
-				# Recompute the interactions 
+				# Recompute the interactions
 				I = get_L_vec(basal, pars, traits_mat, traits_mut)
 
 				# Compute the number of interactions among present species
-				sum_I = sum(I*c(rep(1,Sbasal),pres[step,]))	
+				sum_I = sum(I*c(rep(1,Sbasal),pres[step,]))
 
-				# Compute the probability of successful speciation	
+				# Compute the probability of successful speciation
 				spec_prob = u_0 + u_1*exp(-a_u*sum_I)
 
 				# Test if there is speciation
 				if(runif(1) < spec_prob) {
 					S = S + 1
-					traits_mat[S,] = traits_mut 
+					traits_mat[S,] = traits_mut
 					pres[step,S] = 1
-					anc[S,] = c(step, i)
+					anc[S,] = c(step, i, S) #Time step, ancestor, new_species
 					}
 				}
 			}
@@ -171,29 +174,35 @@ sim_model = function(seed, pars, nsteps) {
 		cooc = matrix(pres_vec,nr=Smax,nc=Smax,byrow=TRUE)*
 		matrix(pres_vec,nr=Smax,nc=Smax,byrow=FALSE)
 		L = get_L_mat(basal, pars, traits_mat)
-		L[c((Sbasal+1):(Sbasal+Smax)),]= L[c((Sbasal+1):(Sbasal+Smax)),]*cooc 	 		
+		L[c((Sbasal+1):(Sbasal+Smax)),]= L[c((Sbasal+1):(Sbasal+Smax)),]*cooc
 		L_list[[step]] = L
 
 		if(int == 0) {
 			in_I = colSums(L)
-			ext_prob = e_0neg + e_1neg*(1 - exp(-a_eneg*in_I)) 
+			ext_prob = e_0neg + e_1neg*(1 - exp(-a_eneg*in_I))
 		}
-	 
+
 	 	if(int == 1) {
 			in_I = colSums(L)
-			ext_prob = e_0pos + e_1pos*exp(-a_epos*in_I) 
+			ext_prob = e_0pos + e_1pos*exp(-a_epos*in_I)
 		}
 
 		if(int == 2) {
 			in_I = colSums(L)
-			out_I = rowSums(L)[(Sbasal+1):(Sbasal+Smax)] 	
-			ext_prob = e_0neg + e_1neg*exp(-a_eneg*out_I) + e_0pos + e_1pos*exp(-a_epos*in_I)	
+			out_I = rowSums(L)[(Sbasal+1):(Sbasal+Smax)]
+			ext_prob = e_0neg + e_1neg*exp(-a_eneg*out_I) + e_0pos + e_1pos*exp(-a_epos*in_I)
 		}
 
 		# Perform extinctions
 		pres[step, pres[step-1,] & runif(Smax,0,1) < ext_prob] = 0
+
+		for(i in 1:Smax) {
+			if(pres[step,i] != pres[step-1,i] & pres[step,i] == 0){
+				extinct[i,] = c(step, i)
+			}
+		}
 	} # End of main loop
 
-	list(pres = pres, traits = traits_mat, anc = anc, L_list = L_list, basal = basal)
+	list(pres = pres, traits = traits_mat, anc = anc, L_list = L_list, basal = basal, extinct = extinct)
 	})
 }
